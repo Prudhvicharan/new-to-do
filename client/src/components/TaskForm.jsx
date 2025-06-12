@@ -1,5 +1,5 @@
 import React from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import {
   Box,
   Button,
@@ -14,16 +14,18 @@ import {
   DialogActions,
 } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 
 const TaskForm = ({ open, handleClose, onSubmit, initialData }) => {
   const safeInitialData = initialData || {};
+
   const {
     register,
     handleSubmit,
-    setValue,
-    watch,
+    control,
     formState: { errors },
+    reset,
   } = useForm({
     defaultValues: {
       title: safeInitialData.title || "",
@@ -36,22 +38,38 @@ const TaskForm = ({ open, handleClose, onSubmit, initialData }) => {
   });
 
   const handleFormSubmit = (data) => {
-    onSubmit(data);
+    try {
+      onSubmit(data);
+      reset();
+      handleClose();
+    } catch (error) {
+      console.error("Error submitting form:", error);
+    }
+  };
+
+  const handleFormClose = () => {
+    reset();
     handleClose();
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleFormClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        {safeInitialData.id ? "Edit Task" : "Create New Task"}
+        {safeInitialData._id ? "Edit Task" : "Create New Task"}
       </DialogTitle>
       <form onSubmit={handleSubmit(handleFormSubmit)}>
         <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
             <TextField
               label="Title"
               fullWidth
-              {...register("title", { required: "Title is required" })}
+              {...register("title", {
+                required: "Title is required",
+                minLength: {
+                  value: 3,
+                  message: "Title must be at least 3 characters long",
+                },
+              })}
               error={!!errors.title}
               helperText={errors.title?.message}
             />
@@ -65,11 +83,24 @@ const TaskForm = ({ open, handleClose, onSubmit, initialData }) => {
             />
 
             <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                label="Due Date"
-                value={watch("dueDate")}
-                onChange={(newValue) => setValue("dueDate", newValue)}
-                renderInput={(params) => <TextField {...params} fullWidth />}
+              <Controller
+                name="dueDate"
+                control={control}
+                rules={{ required: "Due date is required" }}
+                render={({ field, fieldState: { error } }) => (
+                  <DatePicker
+                    label="Due Date"
+                    value={field.value}
+                    onChange={(newValue) => field.onChange(newValue)}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        error: !!error,
+                        helperText: error?.message,
+                      },
+                    }}
+                  />
+                )}
               />
             </LocalizationProvider>
 
@@ -88,9 +119,9 @@ const TaskForm = ({ open, handleClose, onSubmit, initialData }) => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
+          <Button onClick={handleFormClose}>Cancel</Button>
           <Button type="submit" variant="contained" color="primary">
-            {safeInitialData.id ? "Update" : "Create"}
+            {safeInitialData._id ? "Update" : "Create"}
           </Button>
         </DialogActions>
       </form>
