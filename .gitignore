@@ -1,0 +1,7 @@
+# Global ignores
+node_modules/
+client/node_modules/
+server/node_modules/
+.env
+.env.*
+.DS_Store 
